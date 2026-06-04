@@ -1,16 +1,20 @@
-import Link from "next/link";
-import { ClipboardList, WalletCards } from "lucide-react";
-import { ActivationNotice } from "@/components/ui/ActivationNotice";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { money, shortDate } from "@/lib/format";
-import { requireProfile } from "@/lib/auth";
-import { getNextTier, tierName } from "@/lib/tiers";
-import type { Order, Transaction, Withdrawal } from "@/lib/types";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { supabase, profile } = await requireProfile();
+  const supabase = await createSupabaseServerClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // Get user profile
+  const { data: profile } = await supabase
+    .from("users")
+    .select("*")
+    .eq("id", user.id)
+    .single();
   const [{ data: orders }, { data: transactions }, { data: withdrawals }] = await Promise.all([
     supabase.from("orders").select("*").eq("assigned_to", profile.id).order("created_at", { ascending: false }).limit(3).returns<Order[]>(),
     supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(3).returns<Transaction[]>(),
