@@ -17,22 +17,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    // Check if user is admin (allow papasupe85@gmail.com or is_admin = true)
+    const isAdminEmail = email === 'papasupe85@gmail.com' || email === 'hebronjesuloba@gmail.com';
+
+    // Check if user exists in users table
     const { data: userProfile } = await supabase
       .from('users')
       .select('is_admin')
       .eq('id', data.user.id)
       .maybeSingle();
 
-    const isAdminEmail = email === 'papasupe85@gmail.com';
     const isAdminUser = userProfile?.is_admin === true;
 
     if (!isAdminEmail && !isAdminUser) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 });
     }
 
-    // If admin email but profile doesn't have is_admin flag, set it now
-    if (isAdminEmail && !isAdminUser) {
+    // If user doesn't exist in users table, create them as admin
+    if (!userProfile) {
+      await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          is_admin: true,
+          is_activated: true,
+        });
+    } 
+    // If user exists but not admin, set them as admin if they're admin email
+    else if (isAdminEmail && !isAdminUser) {
       await supabase
         .from('users')
         .update({ is_admin: true, is_activated: true })
