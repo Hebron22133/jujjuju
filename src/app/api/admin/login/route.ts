@@ -7,9 +7,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { email, password } = body;
 
+    // Normalize email
+    const normalizedEmail = (email || '').toLowerCase().trim();
+
     // Verify credentials against Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 
@@ -17,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const isAdminEmail = email === 'papasupe85@gmail.com' || email === 'hebronjesuloba@gmail.com';
+    const isAdminEmail = normalizedEmail === 'papasupe85@gmail.com' || normalizedEmail === 'hebronjesuloba@gmail.com';
 
     // Check if user exists in users table
     const { data: userProfile } = await supabase
@@ -27,6 +30,8 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     const isAdminUser = userProfile?.is_admin === true;
+
+    console.log('Admin login attempt:', { normalizedEmail, isAdminEmail, isAdminUser, userProfile });
 
     if (!isAdminEmail && !isAdminUser) {
       return NextResponse.json({ error: 'Not an admin' }, { status: 403 });
@@ -38,7 +43,7 @@ export async function POST(req: NextRequest) {
         .from('users')
         .insert({
           id: data.user.id,
-          email: data.user.email,
+          email: normalizedEmail,
           is_admin: true,
           is_activated: true,
         });
