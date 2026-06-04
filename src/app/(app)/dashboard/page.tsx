@@ -15,105 +15,147 @@ export default async function DashboardPage() {
     .select("*")
     .eq("id", user.id)
     .single();
-  const [{ data: orders }, { data: transactions }, { data: withdrawals }] = await Promise.all([
-    supabase.from("orders").select("*").eq("assigned_to", profile.id).order("created_at", { ascending: false }).limit(3).returns<Order[]>(),
-    supabase.from("transactions").select("*").order("created_at", { ascending: false }).limit(3).returns<Transaction[]>(),
-    supabase.from("withdrawals").select("*").eq("user_id", profile.id).order("created_at", { ascending: false }).limit(3).returns<Withdrawal[]>(),
-  ]);
 
-  const nextTier = getNextTier(profile.balance);
+  if (!profile?.level_id) {
+    return (
+      <div style={{ padding: "20px", maxWidth: "600px", margin: "50px auto" }}>
+        <h1>Account Not Activated</h1>
+        <p>Your account is awaiting admin activation. Please check back later.</p>
+      </div>
+    );
+  }
+
+  // Get level info
+  const { data: level } = await supabase
+    .from("levels")
+    .select("*")
+    .eq("id", profile.level_id)
+    .single();
+
+  // Get progress
+  const { data: progress } = await supabase
+    .from("user_progress")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("level_id", profile.level_id)
+    .single();
+
+  // Get today's completion
+  const today = new Date().toISOString().split("T")[0];
+  const { data: todayCompletion } = await supabase
+    .from("daily_completions")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("level_id", profile.level_id)
+    .gte("completion_date", today)
+    .maybeSingle();
+
+  const daysRemaining = level ? level.duration_days - (progress?.days_completed || 0) : 0;
+  const canWithdraw = progress && level && progress.days_completed >= level.duration_days;
 
   return (
-    <>
-      <ActivationNotice profile={profile} />
-      <section className="panel">
-        <div className="panel-title">My Account</div>
-        <div className="stats">
-          <div className="stat">
-            <div className="stat-label">Balance</div>
-            <div className="stat-value">{money(profile.balance)}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Tier</div>
-            <div className="stat-value">{tierName(profile.tier_level)}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Activation</div>
-            <StatusBadge status={profile.is_activated ? "Active" : "Inactive"} />
-          </div>
-          <div className="stat">
-            <div className="stat-label">Next tier</div>
-            <div className="stat-value">{nextTier ? money(nextTier) : "Max"}</div>
-          </div>
+    <div style={{ padding: "20px", maxWidth: "800px", margin: "0 auto" }}>
+      <h1>User Dashboard</h1>
+
+      {/* Balances */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "30px" }}>
+        <div style={{ border: "1px solid #ddd", padding: "20px", backgroundColor: "#f9f9f9" }}>
+          <h3>Main Balance</h3>
+          <p style={{ fontSize: "28px", fontWeight: "bold", color: "#333" }}>₦{(profile?.main_balance || 0).toLocaleString()}</p>
+          <p style={{ fontSize: "12px", color: "#666" }}>Used to access tasks (not withdrawable)</p>
         </div>
-      </section>
-
-      <section className="quick-links">
-        <Link className="quick-link" href="/orders">
-          <ClipboardList aria-hidden />
-          <div>View Orders</div>
-          <p className="tiny">Assigned tasks</p>
-        </Link>
-        <Link className="quick-link" href="/withdrawals">
-          <WalletCards aria-hidden />
-          <div>Withdraw Cash</div>
-          <p className="tiny">Request payout</p>
-        </Link>
-      </section>
-
-      <section className="panel">
-        <div className="panel-title">Recent Orders</div>
-        <div className="list">
-          {(orders ?? []).map((order) => {
-            const commission = order.amount * (order.commission_rate / 100);
-            return (
-              <div className="list-item" key={order.id}>
-                <div className="list-line">
-                  <strong>{order.title || money(order.amount)}</strong>
-                  <StatusBadge status={order.status} />
-                </div>
-                <div className="tiny">
-                  Amount: {money(order.amount)} | Potential earning: {money(commission)} ({order.commission_rate}%) - {shortDate(order.created_at)}
-                </div>
-              </div>
-            );
-          })}
-          {!orders?.length ? <p className="tiny">No orders assigned to you yet.</p> : null}
+        <div style={{ border: "1px solid #ddd", padding: "20px", backgroundColor: "#f9f9f9" }}>
+          <h3>Commission Balance</h3>
+          <p style={{ fontSize: "28px", fontWeight: "bold", color: "#27ae60" }}>₦{(profile?.commission_balance || 0).toLocaleString()}</p>
+          <p style={{ fontSize: "12px", color: "#666" }}>Withdrawable earnings</p>
         </div>
-      </section>
+      </div>
 
-      <section className="panel">
-        <div className="panel-title">Wallet Activity</div>
-        <div className="list">
-          {(transactions ?? []).map((transaction) => (
-            <div className="list-item" key={transaction.id}>
-              <div className="list-line">
-                <strong>{money(transaction.amount)}</strong>
-                <StatusBadge status={transaction.status} />
-              </div>
-              <div className="tiny">{transaction.type.replaceAll("_", " ")} - {shortDate(transaction.created_at)}</div>
-            </div>
-          ))}
-          {!transactions?.length ? <p className="tiny">No transactions yet.</p> : null}
+      {/* Level Info */}
+      <div style={{ border: "1px solid #ddd", padding: "20px", marginBottom: "30px" }}>
+        <h2>Level {profile?.level_id} Progress</h2>
+        <p>Daily Commission: <strong>₦{level?.daily_commission.toLocaleString()}</strong></p>
+        <p>Days Completed: <strong>{progress?.days_completed || 0} / {level?.duration_days}</strong></p>
+        <p>Total Earned This Level: <strong>₦{(progress?.total_earned || 0).toLocaleString()}</strong></p>
+        <p>Days Remaining: <strong>{daysRemaining}</strong></p>
+
+        {/* Progress Bar */}
+        <div style={{ marginTop: "15px", backgroundColor: "#e0e0e0", height: "20px", borderRadius: "5px", overflow: "hidden" }}>
+          <div
+            style={{
+              backgroundColor: "#27ae60",
+              height: "100%",
+              width: `${((progress?.days_completed || 0) / (level?.duration_days || 1)) * 100}%`,
+              transition: "width 0.3s",
+            }}
+          />
         </div>
-      </section>
+      </div>
 
-      {withdrawals?.length ? (
-        <section className="panel">
-          <div className="panel-title">Withdrawals</div>
-          <div className="list">
-            {withdrawals.map((withdrawal) => (
-              <div className="list-item" key={withdrawal.id}>
-                <div className="list-line">
-                  <strong>{money(withdrawal.amount)}</strong>
-                  <StatusBadge status={withdrawal.status} />
-                </div>
-                <div className="tiny">{shortDate(withdrawal.created_at)}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      ) : null}
-    </>
+      {/* Actions */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+        <form action="/api/user/complete-task" method="POST">
+          <button
+            type="submit"
+            disabled={!!todayCompletion}
+            style={{
+              width: "100%",
+              padding: "15px",
+              backgroundColor: todayCompletion ? "#ccc" : "#3498db",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: todayCompletion ? "not-allowed" : "pointer",
+              fontSize: "16px",
+            }}
+          >
+            {todayCompletion ? "Already Completed Today" : "Complete Today's Task"}
+          </button>
+        </form>
+
+        <form action="/api/user/request-withdrawal" method="POST">
+          <button
+            type="submit"
+            disabled={!canWithdraw || (profile?.commission_balance || 0) === 0}
+            style={{
+              width: "100%",
+              padding: "15px",
+              backgroundColor: canWithdraw && (profile?.commission_balance || 0) > 0 ? "#27ae60" : "#ccc",
+              color: "white",
+              border: "none",
+              borderRadius: "5px",
+              cursor: canWithdraw && (profile?.commission_balance || 0) > 0 ? "pointer" : "not-allowed",
+              fontSize: "16px",
+            }}
+          >
+            {!canWithdraw ? `${daysRemaining} days remaining` : "Request Withdrawal"}
+          </button>
+        </form>
+      </div>
+
+      {/* Upgrade to next level */}
+      {profile?.level_id && profile.level_id < 5 && (
+        <div style={{ border: "1px solid #ffd700", padding: "20px", marginTop: "30px", backgroundColor: "#fffacd" }}>
+          <h3>Ready for Level {profile.level_id + 1}?</h3>
+          <p>Upgrade cost: ₦{level?.entry_amount.toLocaleString()}</p>
+          <p>New daily commission: ₦{((level?.daily_commission || 0) * 2).toLocaleString()}</p>
+          <form action="/api/user/upgrade-level" method="POST">
+            <input type="hidden" name="new_level_id" value={profile.level_id + 1} />
+            <button
+              type="submit"
+              disabled={(profile?.main_balance || 0) < (level?.entry_amount || 0)}
+              style={{
+                padding: "10px 20px",
+                backgroundColor: (profile?.main_balance || 0) >= (level?.entry_amount || 0) ? "#ffd700" : "#ccc",
+                border: "none",
+                cursor: (profile?.main_balance || 0) >= (level?.entry_amount || 0) ? "pointer" : "not-allowed",
+              }}
+            >
+              Upgrade Now
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
   );
 }
