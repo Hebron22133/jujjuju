@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
+const ADMIN_EMAILS = ['papasupe85@gmail.com', 'hebronjesuloba@gmail.com'];
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
@@ -9,6 +11,15 @@ export async function POST(req: NextRequest) {
 
     // Normalize email
     const normalizedEmail = (email || '').toLowerCase().trim();
+
+    // Check if email is admin
+    const isAdminEmail = ADMIN_EMAILS.some(
+      adminEmail => normalizedEmail === adminEmail.toLowerCase()
+    );
+
+    if (!isAdminEmail) {
+      return NextResponse.json({ error: 'Not an admin email' }, { status: 403 });
+    }
 
     // Verify credentials against Supabase Auth
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -20,25 +31,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
-    const isAdminEmail = normalizedEmail === 'papasupe85@gmail.com' || normalizedEmail === 'hebronjesuloba@gmail.com';
-
-    // Check if user exists in users table
+    // Ensure user exists in users table and is marked as admin
     const { data: userProfile } = await supabase
       .from('users')
-      .select('is_admin')
+      .select('id')
       .eq('id', data.user.id)
       .maybeSingle();
 
-    const isAdminUser = userProfile?.is_admin === true;
-
-    console.log('Admin login attempt:', { normalizedEmail, isAdminEmail, isAdminUser, userProfile });
-
-    if (!isAdminEmail && !isAdminUser) {
-      return NextResponse.json({ error: 'Not an admin' }, { status: 403 });
-    }
-
-    // If user doesn't exist in users table, create them as admin
     if (!userProfile) {
+      // Create user as admin
       await supabase
         .from('users')
         .insert({
@@ -47,9 +48,8 @@ export async function POST(req: NextRequest) {
           is_admin: true,
           is_activated: true,
         });
-    } 
-    // If user exists but not admin, set them as admin if they're admin email
-    else if (isAdminEmail && !isAdminUser) {
+    } else {
+      // Ensure existing user is marked as admin
       await supabase
         .from('users')
         .update({ is_admin: true, is_activated: true })
