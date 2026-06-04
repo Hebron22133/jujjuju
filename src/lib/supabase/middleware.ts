@@ -25,7 +25,15 @@ export async function updateSession(request: NextRequest) {
   );
 
   // This refreshes a user's session in the background
-  await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error) {
+    console.error("Middleware auth error:", error);
+  }
+  
+  if (user) {
+    console.log("Middleware: User session refreshed for:", user.email);
+  }
 
   return supabaseResponse;
 }

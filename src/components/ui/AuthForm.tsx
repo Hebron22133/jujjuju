@@ -5,6 +5,43 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
+async function waitForAuthSync(maxAttempts = 10) {
+  console.log("[AuthForm] Starting auth sync check...");
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      console.log(`[AuthForm] Sync attempt ${attempt + 1}/${maxAttempts}`);
+      
+      const response = await fetch("/api/auth/sync", { 
+        cache: "no-store",
+        credentials: "include" 
+      });
+      
+      console.log(`[AuthForm] Sync response status: ${response.status}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log("[AuthForm] Sync response:", data);
+        
+        if (data.authenticated && data.profile) {
+          console.log("[AuthForm] Auth sync successful!");
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error(`[AuthForm] Sync attempt ${attempt + 1} failed:`, error);
+    }
+    
+    // Wait before retrying
+    if (attempt < maxAttempts - 1) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+  }
+  
+  console.error("[AuthForm] Auth sync failed after all attempts");
+  return false;
+}
+
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -19,6 +56,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "");
     const password = String(form.get("password") ?? "");
+    
+    console.log(`[AuthForm] Submitting ${mode} form for:`, email);
+    
     const supabase = createSupabaseBrowserClient();
 
     if (mode === "signup") {
@@ -32,6 +72,8 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       setPasswordMatch(true);
     }
 
+    console.log(`[AuthForm] Calling Supabase ${mode}...`);
+    
     const response =
       mode === "signup"
         ? await supabase.auth.signUp({
@@ -43,16 +85,25 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           })
         : await supabase.auth.signInWithPassword({ email, password });
 
+    console.log(`[AuthForm] Auth response:`, {
+      hasUser: !!response.data.user,
+      hasSession: !!response.data.session,
+      hasError: !!response.error,
+      error: response.error?.message,
+    });
+
     if (response.error) {
       setLoading(false);
       setError(response.error.message);
+      console.error("[AuthForm] Auth error:", response.error);
       return;
     }
 
     if (mode === "signup") {
       if (response.data.user && response.data.session) {
-        // Signup successful with session - wait for profile creation trigger
-        // Database trigger needs time to create the user profile
+        console.log("[AuthForm] Signup successful with session, waiting for profile...");
+        
+        // Wait for profile creation (database trigger)
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Verify the profile was created
@@ -62,18 +113,27 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
           .eq("id", response.data.user.id)
           .single();
         
+        console.log("[AuthForm] Profile check:", { hasProfile: !!profile, profileError: profileError?.message });
+        
         if (profileError || !profile) {
           setLoading(false);
           setError("Account created successfully! Please try logging in.");
           return;
         }
         
-        // Ensure session is synced to server cookies before redirecting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait for auth to sync to server
+        console.log("[AuthForm] Waiting for auth sync...");
+        const synced = await waitForAuthSync();
+        if (!synced) {
+          setLoading(false);
+          setError("Account created! Please try logging in.");
+          return;
+        }
+        
+        console.log("[AuthForm] Auth synced, redirecting to dashboard...");
         router.push("/dashboard");
         return;
       } else if (response.data.user) {
-        // User created but no session - redirect to login to let them verify
         setLoading(false);
         setError("Account created! Please check your email to verify, or try logging in.");
         return;
@@ -82,8 +142,17 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
     if (mode === "login") {
       if (response.data.session) {
-        // Ensure session is synced to server cookies before redirecting
-        await new Promise(resolve => setTimeout(resolve, 500));
+        console.log("[AuthForm] Login successful, waiting for auth sync...");
+        
+        // Wait for auth to sync to server
+        const synced = await waitForAuthSync();
+        if (!synced) {
+          setLoading(false);
+          setError("Login failed. Please try again.");
+          return;
+        }
+        
+        console.log("[AuthForm] Auth synced, redirecting to dashboard...");
         router.push("/dashboard");
         return;
       } else {
