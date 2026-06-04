@@ -5,43 +5,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-async function waitForAuthSync(maxAttempts = 10) {
-  console.log("[AuthForm] Starting auth sync check...");
-  
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      console.log(`[AuthForm] Sync attempt ${attempt + 1}/${maxAttempts}`);
-      
-      const response = await fetch("/api/auth/sync", { 
-        cache: "no-store",
-        credentials: "include" 
-      });
-      
-      console.log(`[AuthForm] Sync response status: ${response.status}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log("[AuthForm] Sync response:", data);
-        
-        if (data.authenticated && data.profile) {
-          console.log("[AuthForm] Auth sync successful!");
-          return true;
-        }
-      }
-    } catch (error) {
-      console.error(`[AuthForm] Sync attempt ${attempt + 1} failed:`, error);
-    }
-    
-    // Wait before retrying
-    if (attempt < maxAttempts - 1) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-  }
-  
-  console.error("[AuthForm] Auth sync failed after all attempts");
-  return false;
-}
-
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -53,117 +16,101 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
     setError("");
     setLoading(true);
 
-    const form = new FormData(event.currentTarget);
-    const email = String(form.get("email") ?? "");
-    const password = String(form.get("password") ?? "");
-    
-    console.log(`[AuthForm] Submitting ${mode} form for:`, email);
-    
-    const supabase = createSupabaseBrowserClient();
+    try {
+      const form = new FormData(event.currentTarget);
+      const email = String(form.get("email") ?? "");
+      const password = String(form.get("password") ?? "");
+      
+      console.log(`[AuthForm] Submitting ${mode} form for:`, email);
+      
+      const supabase = createSupabaseBrowserClient();
 
-    if (mode === "signup") {
-      const confirmPassword = String(form.get("confirm_password") ?? "");
-      if (password !== confirmPassword) {
-        setError("Passwords do not match");
-        setPasswordMatch(false);
+      if (mode === "signup") {
+        const confirmPassword = String(form.get("confirm_password") ?? "");
+        if (password !== confirmPassword) {
+          setError("Passwords do not match");
+          setPasswordMatch(false);
+          setLoading(false);
+          return;
+        }
+        setPasswordMatch(true);
+      }
+
+      console.log(`[AuthForm] Calling Supabase ${mode}...`);
+      
+      const response =
+        mode === "signup"
+          ? await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+              },
+            })
+          : await supabase.auth.signInWithPassword({ email, password });
+
+      console.log(`[AuthForm] Auth response:`, {
+        hasUser: !!response.data.user,
+        hasSession: !!response.data.session,
+        hasError: !!response.error,
+        error: response.error?.message,
+      });
+
+      if (response.error) {
         setLoading(false);
+        setError(response.error.message);
+        console.error("[AuthForm] Auth error:", response.error);
         return;
       }
-      setPasswordMatch(true);
-    }
 
-    console.log(`[AuthForm] Calling Supabase ${mode}...`);
-    
-    const response =
-      mode === "signup"
-        ? await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback`,
-            },
-          })
-        : await supabase.auth.signInWithPassword({ email, password });
+      if (mode === "signup") {
+        if (response.data.user && response.data.session) {
+          console.log("[AuthForm] Signup successful with session");
+          
+          // Wait for profile creation trigger
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Verify profile was created
+          const { data: profile, error: profileError } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", response.data.user.id)
+            .single();
+          
+          console.log("[AuthForm] Profile check:", { hasProfile: !!profile, error: profileError?.message });
+          
+          if (profileError || !profile) {
+            setLoading(false);
+            setError("Account created successfully! Please try logging in.");
+            return;
+          }
+          
+          console.log("[AuthForm] Redirecting to dashboard...");
+          router.replace("/dashboard");
+          return;
+        } else if (response.data.user) {
+          setLoading(false);
+          setError("Account created! Please check your email to verify, or try logging in.");
+          return;
+        }
+      }
 
-    console.log(`[AuthForm] Auth response:`, {
-      hasUser: !!response.data.user,
-      hasSession: !!response.data.session,
-      hasError: !!response.error,
-      error: response.error?.message,
-    });
+      if (mode === "login") {
+        if (response.data.session) {
+          console.log("[AuthForm] Login successful, redirecting...");
+          // Simple redirect - middleware will handle session
+          router.replace("/dashboard");
+          return;
+        }
+      }
 
-    if (response.error) {
       setLoading(false);
-      setError(response.error.message);
-      console.error("[AuthForm] Auth error:", response.error);
-      return;
+      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      console.error("[AuthForm] Unexpected error:", err);
+      setLoading(false);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred");
     }
-
-    if (mode === "signup") {
-      if (response.data.user && response.data.session) {
-        console.log("[AuthForm] Signup successful with session, waiting for profile...");
-        
-        // Wait for profile creation (database trigger)
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Verify the profile was created
-        const { data: profile, error: profileError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", response.data.user.id)
-          .single();
-        
-        console.log("[AuthForm] Profile check:", { hasProfile: !!profile, profileError: profileError?.message });
-        
-        if (profileError || !profile) {
-          setLoading(false);
-          setError("Account created successfully! Please try logging in.");
-          return;
-        }
-        
-        // Wait for auth to sync to server
-        console.log("[AuthForm] Waiting for auth sync...");
-        const synced = await waitForAuthSync();
-        if (!synced) {
-          setLoading(false);
-          setError("Account created! Please try logging in.");
-          return;
-        }
-        
-        console.log("[AuthForm] Auth synced, redirecting to dashboard...");
-        router.push("/dashboard");
-        return;
-      } else if (response.data.user) {
-        setLoading(false);
-        setError("Account created! Please check your email to verify, or try logging in.");
-        return;
-      }
-    }
-
-    if (mode === "login") {
-      if (response.data.session) {
-        console.log("[AuthForm] Login successful, waiting for auth sync...");
-        
-        // Wait for auth to sync to server
-        const synced = await waitForAuthSync();
-        if (!synced) {
-          setLoading(false);
-          setError("Login failed. Please try again.");
-          return;
-        }
-        
-        console.log("[AuthForm] Auth synced, redirecting to dashboard...");
-        router.push("/dashboard");
-        return;
-      } else {
-        setLoading(false);
-        setError("Login failed. Please try again.");
-        return;
-      }
-    }
-
-    setLoading(false);
-    setError("Something went wrong. Please try again.");
   }
 
   return (
