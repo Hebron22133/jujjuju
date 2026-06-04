@@ -23,6 +23,3 @@ export default async function AdminDashboardPage() {
 
   return <AdminDashboardClient totalUsers={totalUsers} activeUsers={activeUsers} pendingWithdrawals={pendingWithdrawals} />;
 }
-    </div>
-  );
-}
