@@ -337,7 +337,7 @@ alter table public.withdrawals enable row level security;
 drop policy if exists "users can read own profile" on public.users;
 create policy "users can read own profile"
 on public.users for select
-using (id = auth.uid() or public.current_user_is_admin());
+using (id = auth.uid());
 
 drop policy if exists "admins can update users" on public.users;
 create policy "admins can update users"

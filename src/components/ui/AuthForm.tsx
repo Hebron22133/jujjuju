@@ -115,7 +115,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <>
-      {error ? <div className="notice error">{error}</div> : null}
+      {error && <div className="notice error">{error}</div>}
       <form className="form" onSubmit={onSubmit}>
         {mode === "signup" && (
           <div className="field">
@@ -195,13 +195,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </form>
       <div className="auth-switch">
         {mode === "signup" ? (
-          <>
-            Already have an account? <Link href="/login">Log in</Link>
-          </>
+          <>Already have an account? <Link href="/login">Log in</Link></>
         ) : (
-          <>
-            New user? <Link href="/signup">Register</Link>
-          </>
+          <>New user? <Link href="/signup">Register</Link></>
         )}
       </div>
     </>
