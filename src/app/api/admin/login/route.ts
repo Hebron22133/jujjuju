@@ -35,34 +35,12 @@ export async function POST(req: NextRequest) {
         user: { id: existingUser.id, email: normalizedEmail },
       });
     } else {
-      // Try to create user if they exist in auth
-      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(existingUser?.id || '');
-      
-      if (authUser) {
-        await supabase
-          .from('users')
-          .insert({
-            id: authUser.id,
-            email: normalizedEmail,
-            is_admin: true,
-            is_activated: true,
-          })
-          .select()
-          .single();
-
-        return NextResponse.json({
-          success: true,
-          token: 'admin_token_' + authUser.id,
-          user: { id: authUser.id, email: normalizedEmail },
-        });
-      } else {
-        // User doesn't exist anywhere, just allow with email
-        return NextResponse.json({
-          success: true,
-          token: 'admin_token_' + normalizedEmail,
-          user: { email: normalizedEmail },
-        });
-      }
+      // User doesn't exist in database, just allow login with email
+      return NextResponse.json({
+        success: true,
+        token: 'admin_token_' + normalizedEmail,
+        user: { email: normalizedEmail },
+      });
     }
   } catch (error) {
     console.error('Login error:', error);
