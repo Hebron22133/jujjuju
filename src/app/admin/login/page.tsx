@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [key, setKey] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -19,7 +19,7 @@ export default function AdminLoginPage() {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, key }),
       });
 
       const data = await response.json();
@@ -50,21 +50,24 @@ export default function AdminLoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{ width: '100%', padding: '8px' }}
+            placeholder="Enter your email"
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
           />
         </div>
         <div style={{ marginBottom: '15px' }}>
-          <label>Password:</label>
+          <label>Key (enter Q):</label>
           <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="text"
+            value={key}
+            onChange={(e) => setKey(e.target.value.toUpperCase())}
             required
-            style={{ width: '100%', padding: '8px' }}
+            maxLength={1}
+            placeholder="Q"
+            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
           />
         </div>
         {error && <p style={{ color: 'red' }}>{error}</p>}
-        <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px' }}>
+        <button type="submit" disabled={loading} style={{ width: '100%', padding: '10px', backgroundColor: '#3498db', color: 'white', border: 'none', cursor: 'pointer' }}>
           {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>

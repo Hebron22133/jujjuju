@@ -1,67 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServerClient } from '@/lib/supabase/server';
 
-const ADMIN_EMAILS = ['papasupe85@gmail.com', 'hebronjesuloba@gmail.com'];
-
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
     const body = await req.json();
-    const { email, password } = body;
+    const { email, key } = body;
+
+    // Check if key is "Q"
+    if (key !== 'Q') {
+      return NextResponse.json({ error: 'Invalid key. Enter Q' }, { status: 401 });
+    }
 
     // Normalize email
     const normalizedEmail = (email || '').toLowerCase().trim();
 
-    // Check if email is admin
-    const isAdminEmail = ADMIN_EMAILS.some(
-      adminEmail => normalizedEmail === adminEmail.toLowerCase()
-    );
-
-    if (!isAdminEmail) {
-      return NextResponse.json({ error: 'Not an admin email' }, { status: 403 });
-    }
-
-    // Verify credentials against Supabase Auth
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-
-    if (error || !data.user) {
-      return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-    }
-
-    // Ensure user exists in users table and is marked as admin
-    const { data: userProfile } = await supabase
+    // Get or create admin user
+    const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
-      .eq('id', data.user.id)
+      .select('id, is_admin')
+      .eq('email', normalizedEmail)
       .maybeSingle();
 
-    if (!userProfile) {
-      // Create user as admin
-      await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email: normalizedEmail,
-          is_admin: true,
-          is_activated: true,
-        });
-    } else {
-      // Ensure existing user is marked as admin
+    if (existingUser) {
+      // User exists, ensure admin flag is set
       await supabase
         .from('users')
         .update({ is_admin: true, is_activated: true })
-        .eq('id', data.user.id);
-    }
+        .eq('id', existingUser.id);
 
-    // Return session token
-    return NextResponse.json({
-      success: true,
-      token: data.session?.access_token,
-      user: { id: data.user.id, email: data.user.email },
-    });
+      return NextResponse.json({
+        success: true,
+        token: 'admin_token_' + existingUser.id,
+        user: { id: existingUser.id, email: normalizedEmail },
+      });
+    } else {
+      // Try to create user if they exist in auth
+      const { data: { user: authUser } } = await supabase.auth.admin.getUserById(existingUser?.id || '');
+      
+      if (authUser) {
+        await supabase
+          .from('users')
+          .insert({
+            id: authUser.id,
+            email: normalizedEmail,
+            is_admin: true,
+            is_activated: true,
+          })
+          .select()
+          .single();
+
+        return NextResponse.json({
+          success: true,
+          token: 'admin_token_' + authUser.id,
+          user: { id: authUser.id, email: normalizedEmail },
+        });
+      } else {
+        // User doesn't exist anywhere, just allow with email
+        return NextResponse.json({
+          success: true,
+          token: 'admin_token_' + normalizedEmail,
+          user: { email: normalizedEmail },
+        });
+      }
+    }
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
