@@ -20,7 +20,7 @@ export function AppShell({
         </form>
       </header>
       <main className="app-main">{children}</main>
-      <BottomNav isAdmin={profile.is_admin} />
+      <BottomNav />
     </div>
   );
 }

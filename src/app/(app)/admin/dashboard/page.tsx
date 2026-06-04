@@ -1,88 +1,121 @@
-import { Message } from "@/components/ui/Message";
-import { money, shortDate } from "@/lib/format";
 import { requireAdminProfile } from "@/lib/auth";
-import type { Profile, Withdrawal } from "@/lib/types";
+import { money } from "@/lib/format";
+import type { Profile, Order, Withdrawal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | undefined>>;
-}) {
-  const params = await searchParams;
+export default async function AdminDashboardPage() {
   const { supabase } = await requireAdminProfile();
 
-  const [
-    { data: totalUsers },
-    { data: activeUsers },
-    { data: pendingOrders },
-    { data: pendingWithdrawals },
-  ] = await Promise.all([
-    supabase.from("users").select("id").returns<{ id: string }[]>(),
-    supabase
-      .from("users")
-      .select("id")
-      .eq("is_activated", true)
-      .returns<{ id: string }[]>(),
-    supabase
-      .from("orders")
-      .select("id")
-      .in("status", ["pending", "assigned"])
-      .returns<{ id: string }[]>(),
+  // Fetch stats
+  const [{ count: totalUsers }, { count: totalOrders }, { data: withdrawals }] = await Promise.all([
+    supabase.from("users").select("*", { count: "exact", head: true }),
+    supabase.from("orders").select("*", { count: "exact", head: true }),
     supabase
       .from("withdrawals")
-      .select("id")
+      .select("*")
       .eq("status", "pending")
-      .returns<{ id: string }[]>(),
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
+
+  const { data: recentUsers } = await supabase
+    .from("users")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5)
+    .returns<Profile[]>();
+
+  const { data: recentOrders } = await supabase
+    .from("orders")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(5)
+    .returns<Order[]>();
+
+  const totalWithdrawals = (withdrawals ?? []).length;
+  const pendingAmount = (withdrawals ?? []).reduce((sum, w) => sum + (w.amount || 0), 0);
 
   return (
     <>
-      <Message message={params.message} type={params.type} />
-      <section className="panel">
-        <div className="panel-title">System Overview</div>
-        <div className="stats">
-          <div className="stat">
-            <div className="stat-label">Total Users</div>
-            <div className="stat-value">{totalUsers?.length ?? 0}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Active Users</div>
-            <div className="stat-value">{activeUsers?.length ?? 0}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Pending Orders</div>
-            <div className="stat-value">{pendingOrders?.length ?? 0}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Withdrawals Pending</div>
-            <div className="stat-value">{pendingWithdrawals?.length ?? 0}</div>
-          </div>
+      <div className="admin-header">
+        <h1>Dashboard</h1>
+        <p>System overview and quick stats</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "24px" }}>
+        <div className="admin-panel" style={{ padding: "16px" }}>
+          <div className="stat-label">Total Agents</div>
+          <h2 style={{ margin: "8px 0 0 0" }}>{totalUsers ?? 0}</h2>
+          <p className="tiny" style={{ color: "#666", margin: "4px 0 0 0" }}>Active users</p>
+        </div>
+        <div className="admin-panel" style={{ padding: "16px" }}>
+          <div className="stat-label">Total Tasks</div>
+          <h2 style={{ margin: "8px 0 0 0" }}>{totalOrders ?? 0}</h2>
+          <p className="tiny" style={{ color: "#666", margin: "4px 0 0 0" }}>Created tasks</p>
+        </div>
+        <div className="admin-panel" style={{ padding: "16px" }}>
+          <div className="stat-label">Pending Withdrawals</div>
+          <h2 style={{ margin: "8px 0 0 0" }}>{totalWithdrawals}</h2>
+          <p className="tiny" style={{ color: "#666", margin: "4px 0 0 0" }}>{money(pendingAmount)}</p>
+        </div>
+      </div>
+
+      {/* Recent Orders */}
+      <section className="admin-panel">
+        <h3>Recent Tasks</h3>
+        <div className="admin-table">
+          {(recentOrders ?? []).length > 0 ? (
+            (recentOrders ?? []).map((order) => (
+              <div className="admin-row" key={order.id}>
+                <div className="admin-cell">
+                  <strong>{order.title}</strong>
+                </div>
+                <div className="admin-cell">
+                  <div className="stat-label">Amount</div>
+                  <strong>{money(order.amount)}</strong>
+                </div>
+                <div className="admin-cell">
+                  <div className="stat-label">Commission</div>
+                  <strong>{order.commission_rate}%</strong>
+                </div>
+                <div className="admin-cell">
+                  <span className="badge">{order.status}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="tiny">No tasks created yet.</p>
+          )}
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-title">Quick Links</div>
-        <div className="list">
-          <a href="/admin/users" className="list-item">
-            <div className="list-line">
-              <strong>Manage Users</strong>
-            </div>
-            <div className="tiny">View and activate/deactivate users</div>
-          </a>
-          <a href="/admin/orders" className="list-item">
-            <div className="list-line">
-              <strong>Manage Orders</strong>
-            </div>
-            <div className="tiny">Create and assign orders to users</div>
-          </a>
-          <a href="/admin/withdrawals" className="list-item">
-            <div className="list-line">
-              <strong>Withdrawals</strong>
-            </div>
-            <div className="tiny">Review and approve withdrawal requests</div>
-          </a>
+      {/* Recent Users */}
+      <section className="admin-panel" style={{ marginTop: "24px" }}>
+        <h3>Recent Agents</h3>
+        <div className="admin-table">
+          {(recentUsers ?? []).length > 0 ? (
+            (recentUsers ?? []).map((user) => (
+              <div className="admin-row" key={user.id}>
+                <div className="admin-cell">
+                  <strong>Agent {user.id.slice(0, 8)}</strong>
+                  <div className="tiny">{user.id}</div>
+                </div>
+                <div className="admin-cell">
+                  <div className="stat-label">Balance</div>
+                  <strong>{money(user.balance)}</strong>
+                </div>
+                <div className="admin-cell">
+                  <span className={`badge ${user.is_activated ? "ok" : "warn"}`}>
+                    {user.is_activated ? "Active" : "Inactive"}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="tiny">No agents yet.</p>
+          )}
         </div>
       </section>
     </>
