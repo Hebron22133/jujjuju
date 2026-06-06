@@ -1,0 +1,77 @@
+⚠ Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
+\\?\C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
+[browser] ⨯ unhandledRejection: Error: Missing NEXT_PUBLIC_SUPABASE_URL
+    at getSupabaseUrl (webpack-internal:///(app-pages-browser)/./src/lib/supabase/config.ts:10:23)
+    at createSupabaseBrowserClient (webpack-internal:///(app-pages-browser)/./src/lib/supabase/browser.ts:10:134)
+    at onSubmit (webpack-internal:///(app-pages-browser)/./src/components/ui/AuthForm.tsx:32:108)
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[15].oneOf[10].use[2]!C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[15].oneOf[10].use[3]!C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css': No serializer registered for PostCSSSyntaxError
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> webpack/lib/ModuleBuildError -> PostCSSSyntaxError
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[15].oneOf[10].use[2]!C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[15].oneOf[10].use[3]!C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css': No serializer registered for PostCSSSyntaxError
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> webpack/lib/ModuleBuildError -> PostCSSSyntaxError
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+⨯ ./src/app/globals.css:103:1
+Syntax error: C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css Unexpected }
+
+ [90m 101 | [39m  color[33m:[39m [36mvar[39m[36m(--primary)[39m[33m;[39m
+ [90m 102 | [39m[33m}[39m
+[1m[31m>[39m[22m[90m 103 | [39m[33m}[39m
+ [90m     | [39m[1m[31m^[39m[22m
+ [90m 104 | [39m
+ [90m 105 | [39m[33m.sign-out[39m [33m{[39m
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[15].oneOf[10].use[2]!C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[15].oneOf[10].use[3]!C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\src\app\globals.css': No serializer registered for PostCSSSyntaxError
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> webpack/lib/ModuleBuildError -> PostCSSSyntaxError
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\.next\dev\cache\webpack\server-development\14.pack.gz_' -> 'C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\.next\dev\cache\webpack\server-development\14.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\.next\dev\cache\webpack\client-development\14.pack.gz_' -> 'C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\.next\dev\cache\webpack\client-development\14.pack.gz'

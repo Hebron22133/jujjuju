@@ -1,0 +1,26 @@
+
+> order-task-portal@1.0.0 dev
+> next dev --webpack --port 3000
+
+▲ Next.js 16.2.7 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://26.196.21.64:3000
+✓ Ready in 1474ms
+  Skipping creating a lockfile at C:\Users\Icredit Admin\Downloads\ng.p2-vip.space\.next\dev\lock because we're using WASM bindings
+
+○ Compiling /login ...
+ GET /login 200 in 30.0s (next.js: 27.9s, application-code: 2.1s)
+ GET /login 200 in 282ms (next.js: 26ms, application-code: 256ms)
+○ Compiling /signup ...
+ GET /signup 200 in 5.7s (next.js: 5.0s, application-code: 694ms)
+ GET /login 200 in 2.7s (next.js: 1914ms, application-code: 816ms)
+ GET /signup 200 in 120ms (next.js: 8ms, application-code: 112ms)
+ GET /login 200 in 67ms (next.js: 9ms, application-code: 58ms)
+ GET /signup 200 in 77ms (next.js: 8ms, application-code: 69ms)
+ GET /signup 200 in 108ms (next.js: 4ms, application-code: 104ms)
+ GET /login 200 in 213ms (next.js: 13ms, application-code: 201ms)
+ GET /signup 200 in 60ms (next.js: 8ms, application-code: 52ms)
+ GET /login 200 in 47ms (next.js: 5ms, application-code: 42ms)
+  Reload env: .env.local
+  Reload env: .env.local
+[?25h
