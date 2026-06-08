@@ -20,32 +20,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Task ID and User ID required' }, { status: 400 })
     }
 
-    console.log(`[process-task] Processing task ${task_id} for user ${user_id}`)
+    console.log(`[process-task] Processing order ${task_id} for user ${user_id}`)
 
-    // Get task details
+    // Get order details from orders table
     const { data: task, error: taskError } = await supabase
-      .from('tasks')
+      .from('orders')
       .select('*')
       .eq('id', task_id)
       .single()
 
     if (taskError || !task) {
-      console.error(`[process-task] Task not found:`, taskError)
-      return NextResponse.json({ error: 'Task not found' }, { status: 404 })
+      console.error(`[process-task] Order not found:`, taskError)
+      return NextResponse.json({ error: 'Order not found' }, { status: 404 })
     }
 
     if (task.status === 'completed') {
-      return NextResponse.json({ error: 'Task already completed' }, { status: 400 })
+      return NextResponse.json({ error: 'Order already completed' }, { status: 400 })
+    }
+
+    if (task.assigned_to !== user_id) {
+      return NextResponse.json({ error: 'This order is not assigned to you' }, { status: 403 })
     }
 
     // Calculate commission
     const commission = Math.round(task.amount * (task.commission_rate / 100) * 100) / 100
 
-    console.log(`[process-task] Task: ${task.title}, Amount: ${task.amount}, Commission: ${commission}`)
+    console.log(`[process-task] Order: ${task.title}, Amount: ${task.amount}, Commission: ${commission}`)
 
-    // Update task status to completed
+    // Update order status to completed
     const { error: updateTaskError } = await supabase
-      .from('tasks')
+      .from('orders')
       .update({
         status: 'completed',
         completed_at: new Date().toISOString()

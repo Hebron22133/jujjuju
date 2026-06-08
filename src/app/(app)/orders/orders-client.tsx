@@ -106,6 +106,7 @@ export default function OrdersClient({
 
   const handleProcessTask = async (taskId: string) => {
     setProcessingId(taskId);
+    setSuccessMessage('');
     try {
       const response = await fetch('/api/user/process-task', {
         method: 'POST',
@@ -116,19 +117,21 @@ export default function OrdersClient({
       const data = await response.json();
 
       if (!response.ok) {
-        setSuccessMessage(`Error: ${data.error}`);
+        setSuccessMessage(`❌ Error: ${data.error}`);
+        setProcessingId(null);
         return;
       }
 
-      setSuccessMessage(`Task completed! Commission ₦${data.commission.toLocaleString()} credited.`);
+      setSuccessMessage(`✅ Task completed! Commission ₦${data.commission.toLocaleString('en-NG')} credited.`);
       setProcessingId(null);
       
-      // Refresh data after 1 second
+      // Refresh data after 1.5 seconds
       setTimeout(() => {
+        setSuccessMessage('');
         fetchData();
-      }, 1000);
+      }, 1500);
     } catch (error: any) {
-      setSuccessMessage(`Error: ${error.message}`);
+      setSuccessMessage(`❌ Error: ${error.message}`);
       setProcessingId(null);
     }
   };
