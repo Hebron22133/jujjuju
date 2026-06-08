@@ -5,6 +5,7 @@ import { requestWithdrawalAction } from "@/actions/app";
 import { ActivationNotice } from "@/components/ui/ActivationNotice";
 import { Message } from "@/components/ui/Message";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { BankInfoModal } from "@/components/BankInfoModal";
 import { money, shortDate } from "@/lib/format";
 import type { Withdrawal } from "@/lib/types";
 
@@ -13,6 +14,10 @@ interface Profile {
   balance: number;
   is_activated: boolean;
   tier_level: number;
+  bank_name?: string;
+  bank_code?: string;
+  account_number?: string;
+  account_holder_name?: string;
 }
 
 export default function WithdrawalsClient({
@@ -31,6 +36,7 @@ export default function WithdrawalsClient({
   const [profile, setProfile] = useState<Profile>(initialProfile);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>(initialWithdrawals);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [showBankModal, setShowBankModal] = useState(false);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -134,6 +140,30 @@ export default function WithdrawalsClient({
       </section>
 
       <section className="panel">
+        <div className="panel-title">Bank Account Details</div>
+        {profile.bank_name ? (
+          <div style={{ marginBottom: "15px" }}>
+            <div className="tiny"><strong>Current Bank:</strong> {profile.bank_name}</div>
+            <div className="tiny"><strong>Account:</strong> {profile.account_number?.slice(-4).padStart(10, '*')}</div>
+            {profile.account_holder_name && (
+              <div className="tiny"><strong>Name:</strong> {profile.account_holder_name}</div>
+            )}
+          </div>
+        ) : (
+          <div style={{ marginBottom: "15px" }}>
+            <p className="tiny" style={{ color: "#666" }}>No bank account configured yet</p>
+          </div>
+        )}
+        <button 
+          className="button small" 
+          onClick={() => setShowBankModal(true)}
+          style={{ marginTop: "10px" }}
+        >
+          {profile.bank_name ? "Update Bank Info" : "Add Bank Account"}
+        </button>
+      </section>
+
+      <section className="panel">
         <div className="panel-title">Pending Requests ({pending.length})</div>
         <div className="list">
           {pending.length > 0 ? (
@@ -186,6 +216,22 @@ export default function WithdrawalsClient({
             ))}
           </div>
         </section>
+      )}
+
+      {showBankModal && (
+        <BankInfoModal 
+          userId={profile.id}
+          currentBank={profile.bank_name ? {
+            bank_name: profile.bank_name,
+            bank_code: profile.bank_code || '',
+            account_number: profile.account_number || '',
+            account_holder_name: profile.account_holder_name
+          } : undefined}
+          onClose={() => setShowBankModal(false)}
+          onSave={() => {
+            fetchData();
+          }}
+        />
       )}
     </>
   );

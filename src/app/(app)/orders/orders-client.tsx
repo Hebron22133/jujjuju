@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { processOrderAction, processTaskAction } from "@/actions/app";
+import { processOrderAction } from "@/actions/app";
 import { ActivationNotice } from "@/components/ui/ActivationNotice";
 import { Message } from "@/components/ui/Message";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -104,6 +104,35 @@ export default function OrdersClient({
     }
   };
 
+  const handleProcessTask = async (taskId: string) => {
+    setProcessingId(taskId);
+    try {
+      const response = await fetch('/api/user/process-task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId, user_id: userId })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setSuccessMessage(`Error: ${data.error}`);
+        return;
+      }
+
+      setSuccessMessage(`Task completed! Commission ₦${data.commission.toLocaleString()} credited.`);
+      setProcessingId(null);
+      
+      // Refresh data after 1 second
+      setTimeout(() => {
+        fetchData();
+      }, 1000);
+    } catch (error: any) {
+      setSuccessMessage(`Error: ${error.message}`);
+      setProcessingId(null);
+    }
+  };
+
   // Show activation notice when polling (not activated)
   if (!profile.is_activated) {
     return (
@@ -160,12 +189,14 @@ export default function OrdersClient({
                     Amount: {money(task.amount)} | Commission: {task.commission_rate}% ({money(calculateCommission(task.amount, task.commission_rate))})
                   </div>
                   <div className="tiny">Level {task.level_id} | Posted: {shortDate(task.created_at)}</div>
-                  <form action={processTaskAction} style={{ marginTop: "0.5rem" }}>
-                    <input type="hidden" name="task_id" value={task.id} />
-                    <button className="button small" type="submit" disabled={!profile.is_activated}>
-                      Process Task
-                    </button>
-                  </form>
+                  <button 
+                    className="button small" 
+                    onClick={() => handleProcessTask(task.id)}
+                    disabled={!profile.is_activated || processingId === task.id}
+                    style={{ marginTop: "0.5rem" }}
+                  >
+                    {processingId === task.id ? <Loader className="inline" size={14} /> : "Process Task"}
+                  </button>
                 </div>
               ))}
               {/* Legacy orders */}

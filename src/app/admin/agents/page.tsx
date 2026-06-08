@@ -16,6 +16,10 @@ interface Agent {
   is_activated: boolean
   tier_level: number
   created_at: string
+  bank_name?: string
+  bank_code?: string
+  account_number?: string
+  account_holder_name?: string
 }
 
 export default function AgentsPage() {
@@ -270,6 +274,7 @@ export default function AgentsPage() {
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Balance</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Tier</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Status</th>
+                      <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Bank</th>
                       <th className="px-6 py-3 text-left text-sm font-semibold text-slate-700">Actions</th>
                     </tr>
                   </thead>
@@ -286,6 +291,19 @@ export default function AgentsPage() {
                             <Badge className="bg-green-100 text-green-700">Active</Badge>
                           ) : (
                             <Badge className="bg-slate-100 text-slate-700">Inactive</Badge>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-sm">
+                          {agent.bank_name ? (
+                            <div>
+                              <div className="font-medium text-slate-900">{agent.bank_name}</div>
+                              <div className="text-xs text-slate-500">{agent.account_number?.slice(-4).padStart(10, '*')}</div>
+                              {agent.account_holder_name && (
+                                <div className="text-xs text-slate-500">{agent.account_holder_name}</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400">Not configured</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm">
