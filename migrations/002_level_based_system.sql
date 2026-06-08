@@ -16,10 +16,10 @@ CREATE TABLE IF NOT EXISTS public.levels (
 INSERT INTO public.levels (id, name, entry_amount, task_access_amount, daily_commission, duration_days) 
 VALUES 
   (1, 'Level 1', 2000, 4000, 500, 2),
-  (2, 'Level 2', 5000, 8000, 2000, 7),
-  (3, 'Level 3', 10000, 16000, 4000, 10),
-  (4, 'Level 4', 20000, 32000, 8000, 15),
-  (5, 'Level 5', 40000, 64000, 16000, 20)
+  (2, 'Level 2', 5000, 10000, 2000, 7),
+  (3, 'Level 3', 10000, 50000, 4000, 10),
+  (4, 'Level 4', 20000, 100000, 8000, 15),
+  (5, 'Level 5', 40000, 200000, 16000, 20)
 ON CONFLICT DO NOTHING;
 
 -- 2. Update users table with new fields

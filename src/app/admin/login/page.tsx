@@ -35,7 +35,7 @@ export default function AdminLoginPage() {
 
       // Store admin token securely
       localStorage.setItem('admin_token', data.token)
-      router.push('/dashboard')
+      router.push('/admin/dashboard')
     } catch (err) {
       setError('Network error. Please try again.')
     } finally {

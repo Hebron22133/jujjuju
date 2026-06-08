@@ -1,45 +1,90 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+export const dynamic = 'force-dynamic'
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
 
 export async function POST(req: NextRequest) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Service not available' }, { status: 503 })
+  }
   try {
-    const supabase = await createSupabaseServerClient();
-    const { user } = await supabase.auth.getUser().then(r => ({ user: r.data.user }));
+    const formData = await req.formData()
+    const title = formData.get('title') as string
+    const description = formData.get('description') as string
+    const amount = parseFloat(formData.get('amount') as string)
+    const commissionRate = parseFloat(formData.get('commissionRate') as string) || 1.2
+    const priority = formData.get('priority') as string
+    const levelId = parseInt(formData.get('levelId') as string) || null
+    const imageFile = formData.get('image') as File | null
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!title || !amount) {
+      return NextResponse.json(
+        { error: 'Title and amount are required' },
+        { status: 400 }
+      )
     }
 
-    // Check if admin
-    const { data: adminProfile } = await supabase
-      .from('users')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single();
-
-    if (!adminProfile?.is_admin) {
-      return NextResponse.json({ error: 'Not an admin' }, { status: 403 });
+    if (!levelId) {
+      return NextResponse.json(
+        { error: 'Level is required for task assignment' },
+        { status: 400 }
+      )
     }
 
-    const body = await req.json();
-    const { level_id, title, description } = body;
+    let imageUrl: string | null = null
 
-    // Create task
-    const { error } = await supabase
+    if (imageFile) {
+      try {
+        const fileName = `task-${Date.now()}-${Math.random().toString(36).substring(7)}`
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('task-images')
+          .upload(fileName, imageFile)
+
+        if (uploadError) throw uploadError
+
+        const { data } = supabase.storage
+          .from('task-images')
+          .getPublicUrl(fileName)
+
+        imageUrl = data.publicUrl
+      } catch (uploadErr) {
+        console.error('Image upload failed:', uploadErr)
+      }
+    }
+
+    // Insert task with level assignment
+    const { data: insertData, error } = await supabase
       .from('tasks')
-      .insert({
-        level_id,
-        title,
-        description,
-        status: 'active',
-      });
+      .insert([
+        {
+          title,
+          description,
+          image_url: imageUrl,
+          amount,
+          commission_rate: commissionRate,
+          status: 'assigned', // Set to assigned since it's for a specific level
+          priority,
+          level_id: levelId,
+        },
+      ])
+      .select()
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
-    }
+    if (error) throw error
 
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Server error' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message: `Task created and assigned to Level ${levelId}`,
+      task: insertData?.[0],
+    })
+  } catch (error) {
+    console.error('Error creating task:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to create task' },
+      { status: 500 }
+    )
   }
 }

@@ -131,6 +131,93 @@ export async function processOrderAction(formData: FormData) {
   redirect(withMessage("/orders", "Order processed and commission credited."));
 }
 
+export async function processTaskAction(formData: FormData) {
+  const { supabase, user } = await requireProfile();
+  const taskId = String(formData.get("task_id") ?? "");
+
+  if (!taskId || !user?.id) {
+    redirect(withMessage("/orders", "Task not found.", "error"));
+  }
+
+  try {
+    // Get task details
+    const { data: task, error: taskError } = await supabase
+      .from('tasks')
+      .select('*')
+      .eq('id', taskId)
+      .single();
+
+    if (taskError || !task) {
+      redirect(withMessage("/orders", "Task not found", "error"));
+    }
+
+    if (task.status === 'completed') {
+      redirect(withMessage("/orders", "Task already completed", "error"));
+    }
+
+    // Calculate commission
+    const commission = task.amount * (task.commission_rate / 100);
+
+    // Update task status to completed
+    const { error: updateTaskError } = await supabase
+      .from('tasks')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', taskId);
+
+    if (updateTaskError) {
+      redirect(withMessage("/orders", "Failed to update task", "error"));
+    }
+
+    // Get current user balance
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('balance')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData) {
+      redirect(withMessage("/orders", "User not found", "error"));
+    }
+
+    const newBalance = userData.balance + commission;
+
+    // Update user balance
+    const { error: updateBalanceError } = await supabase
+      .from('users')
+      .update({ balance: newBalance })
+      .eq('id', user.id);
+
+    if (updateBalanceError) {
+      redirect(withMessage("/orders", "Failed to update balance", "error"));
+    }
+
+    // Create transaction record
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        user_id: user.id,
+        type: 'order_commission',
+        amount: commission,
+        status: 'completed'
+      });
+
+    if (transactionError) {
+      console.error('Transaction record error:', transactionError);
+      // Don't fail - task is still completed even if this fails
+    }
+
+    revalidatePath("/dashboard");
+    revalidatePath("/orders");
+    revalidatePath("/wallet");
+    redirect(withMessage("/orders", `Task completed! Commission ₦${commission.toLocaleString()} credited.`));
+  } catch (error: any) {
+    redirect(withMessage("/orders", error.message || "Failed to complete task", "error"));
+  }
+}
+
 export async function requestWithdrawalAction(formData: FormData) {
   const { supabase } = await requireProfile();
   const amount = formNumber(formData.get("amount"));
